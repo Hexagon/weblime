@@ -1,7 +1,52 @@
+/*
+	 ___________________________________________________________________________________
+	|
+	| LICENSE
+	|
+	|	The MIT License (MIT)
+	|
+	|	Copyright (c) 2014 Hexagon@GitHub
+	|
+	|	Permission is hereby granted, free of charge, to any person obtaining a copy
+	|	of this software and associated documentation files (the "Software"), to deal
+	|	in the Software without restriction, including without limitation the rights
+	|	to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+	|	copies of the Software, and to permit persons to whom the Software is
+	|	furnished to do so, subject to the following conditions:
+	|
+	|	The above copyright notice and this permission notice shall be included in
+	|	all copies or substantial portions of the Software.
+	|
+	|	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+	|	IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+	|	FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+	|	AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+	|	LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+	|	OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+	|	THE SOFTWARE.
+	|___________________________________________________________________________________
+	 ___________________________________________________________________________________
+	|
+	| README
+	|
+	| weblime - A highly experimental canvas/html5 based text editor in an early
+	|           stage of developent
+	|___________________________________________________________________________________
+	 ___________________________________________________________________________________
+	|
+	| TODO
+	|
+	|   * Modifier chars should not be inserted/completed by enter, backspace, tab etc
+	|   * CTRL+Backspace should remove words
+	|   * Syntax highlighting
+	|   * Fix zoom-blurryness
+	|__________________________________________________________________________________
+
+*/
+
 function Weblime(destination_id) {
 
-	var 
-		dest = null,
+	var dest = null,
 		destination = destination_id,
 		c = null,
 		canvas = null,
@@ -17,14 +62,14 @@ function Weblime(destination_id) {
 		cur_col = 0,
 		cur_scroll = 0,
 
-		font = "9pt 'Consolas', 'Courier New', Courier, Monospace"
+		font = "9pt 'Consolas', 'Courier New', Courier, Monospace",
 		ln_height = 16,
 		ln_width = 0,
-		chr_width = 0,
+		chr_width = 0;
 
-		buffer[0] = '';
+	buffer[0] = '';
 
-	function load_file(data,title) {
+	function load_data(data,title) {
 
 		spl = data.split('\r\n');
 		spl = data.split('\r');
@@ -204,6 +249,8 @@ function Weblime(destination_id) {
 	}
 	function keypress_handler(e) {
 
+		var keyCode = "keyCode" in event ? event.keyCode : event.which;
+
 		// Backspace (and prevent going back on backspace)
 		if(e.keyCode==8) {
 			// Prevent default browser behaviour when pressing backspace
@@ -228,7 +275,8 @@ function Weblime(destination_id) {
 				buffer[cur_row] = ''+t_before+t_after;
 				cur_col -= 1;
 			}
-		// Backspace (and prevent going back on backspace)
+
+		// Delete
 		} else if(e.keyCode==46 && e.shiftKey == false && e.charCode != 46) {
 			e.preventDefault();
 
@@ -315,7 +363,7 @@ function Weblime(destination_id) {
 
 
 		// Left-key (Special handling)
-		} else if(e.keyCode == 37 && e.shiftKey == false) {
+		} else if(keyCode == 37 && e.shiftKey == false) {
 			e.preventDefault();
 
 			if(cur_col>0) {
@@ -349,12 +397,17 @@ function Weblime(destination_id) {
 			insert_char(" ");
 			insert_char(" ");
 
-		// Other chars (when charCode is existing)
+		// Single quote, 191 on swedish keyboard and 222 on english?
+		} else if((keyCode == 191 || keyCode == 222) && e.shiftKey == false) {
+			e.preventDefault();
+			insert_char("'");
+
 		} else if(e.charCode) {
 			e.preventDefault();
 
 			insert_char(String.fromCharCode(e.charCode));
-
+		} else {
+			console.log(keyCode,e.charCode,e.which);
 		}
 
 		check_scroll();
@@ -369,56 +422,8 @@ function Weblime(destination_id) {
 	dest.addEventListener('resize', window_resize);
 	canvas.addEventListener('keypress', function(e) { 	if(e.charCode) keypress_handler(e);  						});
 	canvas.addEventListener('keydown', function(e) { 	if(e.keyCode&&e.keyCode!=e.charCode) keypress_handler(e);	}); // Keypress does not capture backspace
-	canvas.addEventListener('click', function(e) {	click_handler(e); 											});
+	canvas.addEventListener('click', function(e) {	click_handler(e); 												});
 	canvas.addEventListener('mousemove', function(e) {	move_handler(e); 											});
-	
-
-	function handleDragOver(evt) {
-		evt.stopPropagation();
-		evt.preventDefault();
-		evt.dataTransfer.dropEffect = 'copy'; // Explicitly show this is a copy.
-	}
-
-	function handleFileSelect(evt) {
-
-		evt.stopPropagation();
-		evt.preventDefault();
-
-		var files = evt.dataTransfer.files; // FileList object
-
-		if(files.length>1) {
-			alert('Only one file at time please.');
-			return false;
-		}
-		if(files.length==0) {
-			alert('This is wierd.');
-			return false;
-		}
-
-		if(f = files[0]) {
-			
-			// Only process text files.
-			//if (!f.type.match('text.*')) {
-			//		alert('Only text-files are supported.');
-			//		return false;
-			//}
-
-			var reader = new FileReader();
-
-			// Closure to capture the file information.
-			reader.onload = function(theFile) {
-				load_file(theFile.target.result,f.name);
-			};
-			
-			reader.readAsText(f);
-		}
-
-		return false;
-	};
-
-	// Setup the dnd listeners.
-	dest.addEventListener('dragover', handleDragOver, false);
-	dest.addEventListener('drop', handleFileSelect, false);
 
 }
 
